@@ -1,0 +1,32 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  annotations:
+    csi.storage.k8s.io/fstype: s3fs
+    everest.io/obs-volume-type: STANDARD
+    pv.kubernetes.io/bind-completed: "yes"
+    pv.kubernetes.io/bound-by-controller: "yes"
+    volume.beta.kubernetes.io/storage-provisioner: everest-csi-provisioner
+  creationTimestamp: "2021-04-24T20:25:49Z"
+  finalizers:
+  - kubernetes.io/pvc-protection
+  name: cce-obs-plexmediaserverc
+  namespace: default
+  resourceVersion: "24586987"
+  selfLink: /api/v1/namespaces/default/persistentvolumeclaims/cce-obs-plexmediaserverc
+  uid: 996e6df4-4b71-4ec5-b398-8fb5a1957860
+spec:
+  accessModes:
+  - ReadWriteMany
+  resources:
+    requests:
+      storage: 1Gi
+  storageClassName: csi-obs
+  volumeMode: Filesystem
+  volumeName: pvc-996e6df4-4b71-4ec5-b398-8fb5a1957860
+status:
+  accessModes:
+  - ReadWriteMany
+  capacity:
+    storage: 1Gi
+  phase: Bound
