@@ -46,7 +46,7 @@ metadata:
   labels:
     app: jira
 spec:
-  replicas: 3
+  replicas: 1
   serviceName: jira
   selector:
     matchLabels:
