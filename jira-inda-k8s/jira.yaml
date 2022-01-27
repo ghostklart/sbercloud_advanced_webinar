@@ -1,0 +1,122 @@
+#
+#
+#
+---
+kind: Namespace
+apiVersion: v1
+metadata:
+  name: atlassian
+---
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  namespace: atlassian
+  name: jira-obs
+  annotations:
+    everest.io/obs-volume-type: STANDARD
+    csi.storage.k8s.io/fstype: s3fs
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 100Gi
+  storageClassName: csi-obs
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: jira-disk
+  namespace: atlassian
+  labels:
+    app: jira
+spec:
+  storageClassName: csi-disk
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 100Gi
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  namespace: atlassian
+  name: jira-pd
+  labels:
+    app: jira
+spec:
+  replicas: 3
+  serviceName: jira
+  selector:
+    matchLabels:
+      app: jira
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: jira
+    spec:
+      volumes:
+        - name: jira-storage
+          persistentVolumeClaim:
+            claimName: jira-disk
+        - name: jira-shared
+          persistentVolumeClaim:
+            claimName: jira-obs
+      containers:
+        - name: jira-docker
+          image: atlassian/jira-software:latest
+          env:
+            - name: JIRA_HOME
+              value: /var/atlassian/application-data/jira
+            - name: JIRA_INSTALL
+              value: /opt/atlassian/jira
+            - name: CATALINA_OPTS
+              value: "-Dfile.encoding=UTF-8 -Xms4096m -Xmx8192m"
+            - name: JVM_MINIMUM_MEMORY
+              value: 4096m
+            - name: JVM_MAXIMUM_MEMORY
+              value: 8192m
+            - name: CLUSTERED
+              value: "true"
+            - name: JIRA_SHARED_HOME
+              value: /var/atlassian/application-data/jira/shared
+          resources:
+            limits:
+              cpu: '6'
+              memory: '8Gi'
+            requests:
+              cpu: '4'
+              memory: '4Gi'
+          volumeMounts:
+            - name: jira-storage
+              mountPath: /var/atlassian/application-data/jira
+            - name: jira-shared
+              mountPath: /var/atlassian/application-data/jira/shared
+          ports:
+            - containerPort: 8080
+---
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: atlassian
+  annotations:
+    kubernetes.io/elb.class: union
+    kubernetes.io/session-affinity-mode: SOURCE_IP
+    kubernetes.io/elb.subnet-id: f4aaa3e0-7d2e-4d3d-aecb-a3d5add15dce
+    kubernetes.io/elb.enterpriseID: cfff085b-3ae1-443d-957a-2d7a1fd73368
+    kubernetes.io/elb.autocreate: '{"type":"public","bandwidth_name":"cce-bandwidth-dtibragimov-jira","bandwidth_chargemode":"traffic","bandwidth_size":100,"bandwidth_sharetype":"PER","eip_type":"5_bgp","name":"jira-lb"}'
+  labels:
+    app: jira
+  name: jira-lb
+spec:
+  externalTrafficPolicy: Local
+  ports:
+  - name: jira-svc0
+    port: 8080
+    protocol: TCP
+    targetPort: 8080
+  selector:
+    app: jira
+  type: LoadBalancer
